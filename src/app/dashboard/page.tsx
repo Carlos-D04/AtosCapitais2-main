@@ -27,7 +27,6 @@ interface Consulta {
 }
 
 export default function Dashboard() {
-  // States for data
   const [salesData, setSalesData] = useState<any[]>([])
   const [branchsData, setBranchsData] = useState<any[]>([])
   const [totalVendas, setTotalVendas] = useState(0)
@@ -36,19 +35,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   
-  // Filter states
   const [selectedBranch, setSelectedBranch] = useState<string>('all')
   const [selectedYear, setSelectedYear] = useState<string>('all')
   const [availableYears, setAvailableYears] = useState<string[]>([])
-  
-  // Session history
+
   const [consultas, setConsultas] = useState<Consulta[]>([])
   const [currentFilters, setCurrentFilters] = useState({
     branch: 'Todas as filiais',
     year: 'Todos os anos'
   })
 
-  // Load initial data
   useEffect(() => {
     const carregarDados = async () => {
       try {
@@ -75,7 +71,7 @@ export default function Dashboard() {
         setBranchsData(branchs)
         setTotalVendas(somaInicial)
         setTotalEmpresas(branchs.length)
-        setTotalPedidos(salesWithBranchCnpj.length) // Initialize with total orders
+        setTotalPedidos(salesWithBranchCnpj.length)
         setAvailableYears(years)
       } catch (err: any) {
         console.error('Erro ao buscar dados:', err)
@@ -88,7 +84,6 @@ export default function Dashboard() {
     carregarDados()
   }, [])
 
-  // Update history when filters change
   useEffect(() => {
     const newConsultas: Consulta[] = []
     const now = new Date()
@@ -107,10 +102,7 @@ export default function Dashboard() {
         branch: branchsData.find(b => b.cnpj === selectedBranch)?.name || 'Todas as filiais'
       }))
     } else {
-      setCurrentFilters(prev => ({
-        ...prev,
-        branch: 'Todas as filiais'
-      }))
+      setCurrentFilters(prev => ({ ...prev, branch: 'Todas as filiais' }))
     }
 
     if (selectedYear !== 'all') {
@@ -122,38 +114,62 @@ export default function Dashboard() {
         timestamp: now,
         filtro: 'Ano'
       })
-      setCurrentFilters(prev => ({
-        ...prev,
-        year: selectedYear
-      }))
+      setCurrentFilters(prev => ({ ...prev, year: selectedYear }))
     } else {
-      setCurrentFilters(prev => ({
-        ...prev,
-        year: 'Todos os anos'
-      }))
+      setCurrentFilters(prev => ({ ...prev, year: 'Todos os anos' }))
     }
 
     if (newConsultas.length > 0) {
-      setConsultas(prev => [...newConsultas, ...prev].slice(0, 50)) // Limit to 50 most recent
+      setConsultas(prev => [...newConsultas, ...prev].slice(0, 50))
     }
   }, [selectedBranch, selectedYear, branchsData])
 
-  // Filter sales data
-  const filteredByBranch = selectedBranch === 'all' 
-    ? salesData 
+  const filteredByBranch = selectedBranch === 'all'
+    ? salesData
     : salesData.filter(sale => sale.branch_cnpj === selectedBranch)
 
   const filteredSales = selectedYear === 'all'
     ? filteredByBranch
-    : filteredByBranch.filter(sale => 
+    : filteredByBranch.filter(sale =>
         new Date(sale.date).getFullYear().toString() === selectedYear
       )
 
-  // Calculate totals
+  const previousYear = selectedYear !== 'all'
+    ? (parseInt(selectedYear) - 1).toString()
+    : null
+
+  const previousSales = previousYear
+    ? filteredByBranch.filter(sale =>
+        new Date(sale.date).getFullYear().toString() === previousYear
+      )
+    : []
+
+  const groupSalesByMonth = (sales: any[]) => {
+    const months: Record<string, number> = {}
+    sales.forEach((sale) => {
+      const month = new Date(sale.date).toLocaleString('pt-BR', { month: 'long' }).toLowerCase()
+      months[month] = (months[month] || 0) + sale.value
+    })
+    return months
+  }
+
+  const currentSalesByMonth = groupSalesByMonth(filteredSales)
+  const previousSalesByMonth = groupSalesByMonth(previousSales)
+
+  const allMonths = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ]
+
+  const chartData = allMonths.map((month) => ({
+    month: month.charAt(0).toUpperCase() + month.slice(1),
+    atual: currentSalesByMonth[month] || 0,
+    anterior: previousSalesByMonth[month] || 0
+  }))
+
   useEffect(() => {
     const soma = filteredSales.reduce((acc: number, venda: any) => acc + Number(venda.value), 0)
     const pedidos = filteredSales.length
-    
     setTotalVendas(soma)
     setTotalPedidos(pedidos)
   }, [filteredSales])
@@ -163,7 +179,6 @@ export default function Dashboard() {
 
   return (
     <main className="sm:ml-14 p-4">
-      {/* Metrics Cards */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
@@ -218,7 +233,7 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-center">
               <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">
-                Pedidos
+                Total de Vendas
               </CardTitle>
               <BadgeDollarSign className="ml-auto w-4 h-4" />
             </div>
@@ -232,11 +247,9 @@ export default function Dashboard() {
         </Card>
       </section>
 
-      {/* Chart and History Section */}
       <section className="mt-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Overview Histórico</h2>
-          
           <div className="flex gap-2">
             <select 
               onChange={(e) => setSelectedYear(e.target.value)}
@@ -248,7 +261,7 @@ export default function Dashboard() {
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
-            
+
             <select 
               onChange={(e) => setSelectedBranch(e.target.value)}
               value={selectedBranch}
@@ -264,52 +277,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Chart */}
-          <div className="lg:w-[70%] bg-white p-4 rounded-lg shadow h-[400px]">
-            <ChartOverview sales={filteredSales} />
-          </div>
-          
-          {/* Query History */}
-          <div className="lg:w-[30%] bg-white p-4 rounded-lg shadow">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-lg">Histórico de Consultas</h3>
-              <span className="text-xs text-gray-500">
-                {consultas.length} registros
-              </span>
-            </div>
-            
-            {consultas.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4 text-center">
-                Nenhuma consulta realizada ainda
-              </p>
-            ) : (
-              <div className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
-                {consultas.map((consulta) => (
-                  <div key={consulta.id} className="border-b pb-3 last:border-b-0">
-                    <div className="flex justify-between items-start">
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        consulta.tipo === 'filial' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {consulta.filtro}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {consulta.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <p className="font-medium text-sm mt-1">
-                      {consulta.nome}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {consulta.timestamp.toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <ChartOverview data={chartData} />
         </div>
       </section>
     </main>
