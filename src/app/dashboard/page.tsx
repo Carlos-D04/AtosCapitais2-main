@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ChartOverview from '@/components/chart'
 import {
   Card,
@@ -33,8 +33,9 @@ export default function Dashboard() {
   const [totalEmpresas, setTotalEmpresas] = useState(0)
   const [totalPedidos, setTotalPedidos] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadingChart, setLoadingChart] = useState(false)
   const [error, setError] = useState('')
-  
+
   const [selectedBranch, setSelectedBranch] = useState<string>('all')
   const [selectedYear, setSelectedYear] = useState<string>('all')
   const [availableYears, setAvailableYears] = useState<string[]>([])
@@ -61,7 +62,7 @@ export default function Dashboard() {
           branch_cnpj: branchs.find((b: any) => b.name === sale.branche_name)?.cnpj || ''
         }))
 
-        const years = [...new Set(sales.map((sale: any) => 
+        const years = [...new Set(sales.map((sale: any) =>
           new Date(sale.date).getFullYear().toString()
         ))].sort((a, b) => parseInt(b) - parseInt(a))
 
@@ -85,22 +86,20 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    const newConsultas: Consulta[] = []
     const now = new Date()
+    const newConsultas: Consulta[] = []
 
     if (selectedBranch !== 'all') {
+      const nome = branchsData.find(b => b.cnpj === selectedBranch)?.name || selectedBranch
       newConsultas.push({
         id: now.getTime() + '-branch',
         tipo: 'filial',
         valor: selectedBranch,
-        nome: branchsData.find(b => b.cnpj === selectedBranch)?.name || selectedBranch,
+        nome,
         timestamp: now,
         filtro: 'Filial'
       })
-      setCurrentFilters(prev => ({
-        ...prev,
-        branch: branchsData.find(b => b.cnpj === selectedBranch)?.name || 'Todas as filiais'
-      }))
+      setCurrentFilters(prev => ({ ...prev, branch: nome }))
     } else {
       setCurrentFilters(prev => ({ ...prev, branch: 'Todas as filiais' }))
     }
@@ -124,25 +123,29 @@ export default function Dashboard() {
     }
   }, [selectedBranch, selectedYear, branchsData])
 
-  const filteredByBranch = selectedBranch === 'all'
-    ? salesData
-    : salesData.filter(sale => sale.branch_cnpj === selectedBranch)
+  // Otimizações com useMemo
 
-  const filteredSales = selectedYear === 'all'
-    ? filteredByBranch
-    : filteredByBranch.filter(sale =>
-        new Date(sale.date).getFullYear().toString() === selectedYear
-      )
+  const filteredByBranch = useMemo(() => {
+    return selectedBranch === 'all'
+      ? salesData
+      : salesData.filter(sale => sale.branch_cnpj === selectedBranch)
+  }, [salesData, selectedBranch])
 
-  const previousYear = selectedYear !== 'all'
-    ? (parseInt(selectedYear) - 1).toString()
-    : null
+  const filteredSales = useMemo(() => {
+    return selectedYear === 'all'
+      ? filteredByBranch
+      : filteredByBranch.filter(sale =>
+          new Date(sale.date).getFullYear().toString() === selectedYear
+        )
+  }, [selectedYear, filteredByBranch])
 
-  const previousSales = previousYear
-    ? filteredByBranch.filter(sale =>
-        new Date(sale.date).getFullYear().toString() === previousYear
-      )
-    : []
+  const previousSales = useMemo(() => {
+    if (selectedYear === 'all') return []
+    const previousYear = (parseInt(selectedYear) - 1).toString()
+    return filteredByBranch.filter(sale =>
+      new Date(sale.date).getFullYear().toString() === previousYear
+    )
+  }, [selectedYear, filteredByBranch])
 
   const groupSalesByMonth = (sales: any[]) => {
     const months: Record<string, number> = {}
@@ -153,25 +156,30 @@ export default function Dashboard() {
     return months
   }
 
-  const currentSalesByMonth = groupSalesByMonth(filteredSales)
-  const previousSalesByMonth = groupSalesByMonth(previousSales)
-
   const allMonths = [
     'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
   ]
 
-  const chartData = allMonths.map((month) => ({
-    month: month.charAt(0).toUpperCase() + month.slice(1),
-    atual: currentSalesByMonth[month] || 0,
-    anterior: previousSalesByMonth[month] || 0
-  }))
+  const chartData = useMemo(() => {
+    const currentSalesByMonth = groupSalesByMonth(filteredSales)
+    const previousSalesByMonth = groupSalesByMonth(previousSales)
 
+    return allMonths.map((month) => ({
+      month: month.charAt(0).toUpperCase() + month.slice(1),
+      atual: currentSalesByMonth[month] || 0,
+      anterior: previousSalesByMonth[month] || 0
+    }))
+  }, [filteredSales, previousSales])
+
+  // Recalcula cards e ativa loading temporário para o gráfico
   useEffect(() => {
+    setLoadingChart(true)
     const soma = filteredSales.reduce((acc: number, venda: any) => acc + Number(venda.value), 0)
-    const pedidos = filteredSales.length
     setTotalVendas(soma)
-    setTotalPedidos(pedidos)
+    setTotalPedidos(filteredSales.length)
+    const timer = setTimeout(() => setLoadingChart(false), 150)
+    return () => clearTimeout(timer)
   }, [filteredSales])
 
   if (loading) return <p className="p-4 text-gray-700">Carregando...</p>
@@ -179,6 +187,7 @@ export default function Dashboard() {
 
   return (
     <main className="sm:ml-14 p-4">
+      {/* Cards de Métricas */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
@@ -233,7 +242,7 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-center">
               <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">
-                Total de Vendas
+                Pedidos
               </CardTitle>
               <BadgeDollarSign className="ml-auto w-4 h-4" />
             </div>
@@ -247,11 +256,12 @@ export default function Dashboard() {
         </Card>
       </section>
 
+      {/* Filtros e Gráfico */}
       <section className="mt-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Overview Histórico</h2>
           <div className="flex gap-2">
-            <select 
+            <select
               onChange={(e) => setSelectedYear(e.target.value)}
               value={selectedYear}
               className="p-2 text-sm border rounded-md bg-white dark:bg-gray-800 min-w-[120px]"
@@ -262,7 +272,7 @@ export default function Dashboard() {
               ))}
             </select>
 
-            <select 
+            <select
               onChange={(e) => setSelectedBranch(e.target.value)}
               value={selectedBranch}
               className="p-2 text-sm border rounded-md bg-white dark:bg-gray-800 min-w-[150px]"
@@ -277,8 +287,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow">
-          <ChartOverview data={chartData} />
+        <div className="bg-white p-4 rounded-lg shadow min-h-[380px]">
+          {loadingChart ? (
+            <p className="text-center text-sm text-gray-500 mt-24">Carregando gráfico...</p>
+          ) : (
+            <ChartOverview data={chartData} />
+          )}
         </div>
       </section>
     </main>
