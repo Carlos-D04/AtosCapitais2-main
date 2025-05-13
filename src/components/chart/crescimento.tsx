@@ -1,6 +1,6 @@
 'use client'
 
-import { DollarSign } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -14,29 +14,27 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  ResponsiveContainer,
-  Legend
+  ResponsiveContainer
 } from 'recharts'
 
-interface ChartData {
+interface CrescimentoData {
   month: string
-  atual: number
-  meta: number
+  crescimento: number
 }
 
-interface ChartMetasProps {
-  data: ChartData[]
+interface ChartCrescimentoProps {
+  data: CrescimentoData[]
 }
 
-export default function ChartMetas({ data }: ChartMetasProps) {
+export default function ChartCrescimento({ data }: ChartCrescimentoProps) {
   return (
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-center">
           <CardTitle className="text-lg sm:text-xl text-gray-800">
-            Comparativo com Metas
+            Crescimento Mensal (%)
           </CardTitle>
-          <DollarSign className="ml-auto w-4 h-4" />
+          <TrendingUp className="ml-auto w-4 h-4" />
         </div>
       </CardHeader>
       <CardContent>
@@ -45,16 +43,17 @@ export default function ChartMetas({ data }: ChartMetasProps) {
             <BarChart data={data}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} interval={0} />
-              <YAxis axisLine={false} tickLine={false} />
+              <YAxis axisLine={false} tickLine={false} unit="%" />
               <Tooltip
-                formatter={(value: any) =>
-                  [`R$ ${Number(value).toLocaleString('pt-BR')}`, 'Valor']
-                }
+                formatter={(value: any) => [`${value.toFixed(2)}%`, 'Crescimento']}
                 labelFormatter={(label) => `Mês: ${label}`}
               />
-              <Legend />
-              <Bar dataKey="atual" fill="#2563eb" name="Valor Atual" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="meta" fill="#f97316" name="Meta (105%)" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="crescimento"
+                fill="#10b981"
+                radius={[4, 4, 0, 0]}
+                isAnimationActive={false}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import ChartOverview from '@/components/chart'
-import ChartMetas from '@/components/chart/chartmeta'
+import ChartMetas from '@/components/chart/meta'
+import ChartCrescimento from '@/components/chart/crescimento'
 import {
   Card,
   CardContent,
@@ -40,7 +41,7 @@ export default function Dashboard() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all')
   const [selectedYear, setSelectedYear] = useState<string>('all')
   const [availableYears, setAvailableYears] = useState<string[]>([])
-  const [selectedChart, setSelectedChart] = useState<'vendas' | 'metas'>('vendas')
+  const [selectedChart, setSelectedChart] = useState<'vendas' | 'metas' | 'crescimento'>('vendas')
 
   const [consultas, setConsultas] = useState<Consulta[]>([])
   const [currentFilters, setCurrentFilters] = useState({
@@ -183,6 +184,24 @@ export default function Dashboard() {
     }))
   }, [filteredSales, previousSales])
 
+  const chartDataCrescimento = useMemo(() => {
+    const current = groupSalesByMonth(filteredSales)
+    const previous = groupSalesByMonth(previousSales)
+
+    return allMonths.map(month => {
+      const atual = current[month] || 0
+      const anterior = previous[month] || 0
+      let crescimento = 0
+      if (anterior > 0) {
+        crescimento = ((atual - anterior) / anterior) * 100
+      }
+      return {
+        month: month.charAt(0).toUpperCase() + month.slice(1),
+        crescimento: parseFloat(crescimento.toFixed(2))
+      }
+    })
+  }, [filteredSales, previousSales])
+
   useEffect(() => {
     setLoadingChart(true)
     const soma = filteredSales.reduce((acc: number, venda: any) => acc + Number(venda.value), 0)
@@ -197,8 +216,8 @@ export default function Dashboard() {
 
   return (
     <main className="sm:ml-14 p-4">
+      {/* ...cards de métricas (sem alterações) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Cards de métricas */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-center">
@@ -256,13 +275,12 @@ export default function Dashboard() {
             <p className="text-base sm:text-lg font-bold">{totalPedidos}</p>
           </CardContent>
         </Card>
-      </section>
-
-      {/* Filtros e gráficos */}
+      </section>      
       <section className="mt-8">
+        {/* Botões de gráfico */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <h2 className="text-xl font-bold">Visualização de Gráficos</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setSelectedChart('vendas')}
               className={`px-4 py-2 rounded border text-sm font-medium ${
@@ -283,9 +301,20 @@ export default function Dashboard() {
             >
               Gráfico de Metas
             </button>
+            <button
+              onClick={() => setSelectedChart('crescimento')}
+              className={`px-4 py-2 rounded border text-sm font-medium ${
+                selectedChart === 'crescimento'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Gráfico de Crescimento
+            </button>
           </div>
         </div>
 
+        {/* Filtros */}
         <div className="flex gap-4 mb-4">
           <select
             onChange={(e) => setSelectedYear(e.target.value)}
@@ -312,13 +341,16 @@ export default function Dashboard() {
           </select>
         </div>
 
+        {/* Gráfico selecionado */}
         <div className="bg-white p-4 rounded-lg shadow min-h-[380px]">
           {loadingChart ? (
             <p className="text-center text-sm text-gray-500 mt-24">Carregando gráfico...</p>
           ) : selectedChart === 'vendas' ? (
             <ChartOverview data={chartDataVendas} />
-          ) : (
+          ) : selectedChart === 'metas' ? (
             <ChartMetas data={chartDataMetas} />
+          ) : (
+            <ChartCrescimento data={chartDataCrescimento} />
           )}
         </div>
       </section>
