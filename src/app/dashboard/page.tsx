@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import ChartOverview from '@/components/chart'
+import ChartMetas from '@/components/chart/chartmeta'
 import {
   Card,
   CardContent,
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all')
   const [selectedYear, setSelectedYear] = useState<string>('all')
   const [availableYears, setAvailableYears] = useState<string[]>([])
+  const [selectedChart, setSelectedChart] = useState<'vendas' | 'metas'>('vendas')
 
   const [consultas, setConsultas] = useState<Consulta[]>([])
   const [currentFilters, setCurrentFilters] = useState({
@@ -123,8 +125,6 @@ export default function Dashboard() {
     }
   }, [selectedBranch, selectedYear, branchsData])
 
-  // Otimizações com useMemo
-
   const filteredByBranch = useMemo(() => {
     return selectedBranch === 'all'
       ? salesData
@@ -161,18 +161,28 @@ export default function Dashboard() {
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
   ]
 
-  const chartData = useMemo(() => {
-    const currentSalesByMonth = groupSalesByMonth(filteredSales)
-    const previousSalesByMonth = groupSalesByMonth(previousSales)
+  const chartDataVendas = useMemo(() => {
+    const current = groupSalesByMonth(filteredSales)
+    const previous = groupSalesByMonth(previousSales)
 
-    return allMonths.map((month) => ({
+    return allMonths.map(month => ({
       month: month.charAt(0).toUpperCase() + month.slice(1),
-      atual: currentSalesByMonth[month] || 0,
-      anterior: previousSalesByMonth[month] || 0
+      atual: current[month] || 0,
+      anterior: previous[month] || 0
     }))
   }, [filteredSales, previousSales])
 
-  // Recalcula cards e ativa loading temporário para o gráfico
+  const chartDataMetas = useMemo(() => {
+    const current = groupSalesByMonth(filteredSales)
+    const previous = groupSalesByMonth(previousSales)
+
+    return allMonths.map(month => ({
+      month: month.charAt(0).toUpperCase() + month.slice(1),
+      atual: current[month] || 0,
+      meta: previous[month] ? previous[month] * 1.05 : 0
+    }))
+  }, [filteredSales, previousSales])
+
   useEffect(() => {
     setLoadingChart(true)
     const soma = filteredSales.reduce((acc: number, venda: any) => acc + Number(venda.value), 0)
@@ -187,14 +197,12 @@ export default function Dashboard() {
 
   return (
     <main className="sm:ml-14 p-4">
-      {/* Cards de Métricas */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Cards de métricas */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-center">
-              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">
-                Total vendas
-              </CardTitle>
+              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Total vendas</CardTitle>
               <DollarSign className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>
@@ -211,9 +219,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-center">
-              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">
-                Novas Empresas
-              </CardTitle>
+              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Novas Empresas</CardTitle>
               <User className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>Total cadastrado</CardDescription>
@@ -226,9 +232,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-center">
-              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">
-                Relatórios
-              </CardTitle>
+              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Relatórios</CardTitle>
               <Percent className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>Total gerados</CardDescription>
@@ -241,9 +245,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-center">
-              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">
-                Pedidos
-              </CardTitle>
+              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Pedidos</CardTitle>
               <BadgeDollarSign className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>
@@ -256,42 +258,67 @@ export default function Dashboard() {
         </Card>
       </section>
 
-      {/* Filtros e Gráfico */}
+      {/* Filtros e gráficos */}
       <section className="mt-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Overview Histórico</h2>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+          <h2 className="text-xl font-bold">Visualização de Gráficos</h2>
           <div className="flex gap-2">
-            <select
-              onChange={(e) => setSelectedYear(e.target.value)}
-              value={selectedYear}
-              className="p-2 text-sm border rounded-md bg-white dark:bg-gray-800 min-w-[120px]"
+            <button
+              onClick={() => setSelectedChart('vendas')}
+              className={`px-4 py-2 rounded border text-sm font-medium ${
+                selectedChart === 'vendas'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-100'
+              }`}
             >
-              <option value="all">Todos os anos</option>
-              {availableYears.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-
-            <select
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              value={selectedBranch}
-              className="p-2 text-sm border rounded-md bg-white dark:bg-gray-800 min-w-[150px]"
+              Gráfico de Vendas
+            </button>
+            <button
+              onClick={() => setSelectedChart('metas')}
+              className={`px-4 py-2 rounded border text-sm font-medium ${
+                selectedChart === 'metas'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-100'
+              }`}
             >
-              <option value="all">Todas as filiais</option>
-              {branchsData.map((branch) => (
-                <option key={branch.cnpj} value={branch.cnpj}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
+              Gráfico de Metas
+            </button>
           </div>
+        </div>
+
+        <div className="flex gap-4 mb-4">
+          <select
+            onChange={(e) => setSelectedYear(e.target.value)}
+            value={selectedYear}
+            className="p-2 text-sm border rounded-md bg-white dark:bg-gray-800 min-w-[120px]"
+          >
+            <option value="all">Todos os anos</option>
+            {availableYears.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+
+          <select
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            value={selectedBranch}
+            className="p-2 text-sm border rounded-md bg-white dark:bg-gray-800 min-w-[150px]"
+          >
+            <option value="all">Todas as filiais</option>
+            {branchsData.map((branch) => (
+              <option key={branch.cnpj} value={branch.cnpj}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow min-h-[380px]">
           {loadingChart ? (
             <p className="text-center text-sm text-gray-500 mt-24">Carregando gráfico...</p>
+          ) : selectedChart === 'vendas' ? (
+            <ChartOverview data={chartDataVendas} />
           ) : (
-            <ChartOverview data={chartData} />
+            <ChartMetas data={chartDataMetas} />
           )}
         </div>
       </section>
