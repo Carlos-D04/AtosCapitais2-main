@@ -237,7 +237,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-center">
-              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Novas Empresas</CardTitle>
+              <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Total de Empresas</CardTitle>
               <User className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>Total cadastrado</CardDescription>
