@@ -216,7 +216,6 @@ export default function Dashboard() {
 
   return (
     <main className="sm:ml-14 p-4">
-      {/* ...cards de métricas (sem alterações) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
@@ -277,7 +276,6 @@ export default function Dashboard() {
         </Card>
       </section>      
       <section className="mt-8">
-        {/* Botões de gráfico */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <h2 className="text-xl font-bold">Visualização de Gráficos</h2>
           <div className="flex gap-2 flex-wrap">
@@ -314,7 +312,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Filtros */}
         <div className="flex gap-4 mb-4">
           <select
             onChange={(e) => setSelectedYear(e.target.value)}
@@ -341,7 +338,6 @@ export default function Dashboard() {
           </select>
         </div>
 
-        {/* Gráfico selecionado */}
         <div className="bg-white p-4 rounded-lg shadow min-h-[380px]">
           {loadingChart ? (
             <p className="text-center text-sm text-gray-500 mt-24">Carregando gráfico...</p>
