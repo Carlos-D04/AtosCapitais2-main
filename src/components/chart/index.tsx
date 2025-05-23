@@ -1,7 +1,12 @@
 'use client'
 
 import { DollarSign } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from '../ui/card'
 import {
   BarChart,
   Bar,
@@ -10,7 +15,7 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-  Legend,
+  Legend
 } from 'recharts'
 
 interface ChartData {
@@ -29,7 +34,7 @@ export default function ChartOverview({ data }: ChartOverviewProps) {
       <CardHeader>
         <div className="flex items-center justify-center">
           <CardTitle className="text-lg sm:text-xl text-gray-800">
-            Total Vendas por Mês
+            Overview Histórico
           </CardTitle>
           <DollarSign className="ml-auto w-4 h-4" />
         </div>
@@ -39,33 +44,18 @@ export default function ChartOverview({ data }: ChartOverviewProps) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                interval={0}
-              />
+              <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} interval={0} />
               <YAxis axisLine={false} tickLine={false} />
               <Tooltip
-                formatter={(value: any) =>
-                  [`R$ ${Number(value).toLocaleString('pt-BR')}`, 'Valor']
+                formatter={(value: any, name: string) =>
+                  [`R$ ${Number(value).toLocaleString('pt-BR')}`, name === 'anterior' ? 'Ano anterior' : 'Ano atual']
                 }
                 labelFormatter={(label) => `Mês: ${label}`}
               />
               <Legend />
-              <Bar
-                dataKey="atual"
-                fill="#2563eb"
-                name="Ano Atual"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="anterior"
-                fill="#f97316"
-                name="Ano Anterior"
-                radius={[4, 4, 0, 0]}
-              />
+              {/* ORDEM: Ano anterior primeiro (laranja), depois ano atual (azul) */}
+              <Bar dataKey="anterior" fill="#f97316" name="Ano anterior" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="atual" fill="#2563eb" name="Ano atual" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

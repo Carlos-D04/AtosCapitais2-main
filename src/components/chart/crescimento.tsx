@@ -16,6 +16,7 @@ import {
   CartesianGrid,
   ResponsiveContainer
 } from 'recharts'
+import { useMemo } from 'react'
 
 interface CrescimentoData {
   month: string
@@ -27,6 +28,26 @@ interface ChartCrescimentoProps {
 }
 
 export default function ChartCrescimento({ data }: ChartCrescimentoProps) {
+  // Obter o nome do mês atual em português (minúsculo)
+  const currentMonthName = new Date().toLocaleString('pt-BR', { month: 'long' }).toLowerCase()
+
+  // Processar os dados para zerar meses futuros
+  const processedData = useMemo(() => {
+    // Encontrar o índice do mês atual no array de dados
+    const currentMonthIndex = data.findIndex(item => 
+      item.month.toLowerCase() === currentMonthName
+    )
+
+    // Se não encontrou o mês atual, retorna os dados originais
+    if (currentMonthIndex === -1) return data
+
+    // Zerar os meses após o atual
+    return data.map((item, index) => ({
+      ...item,
+      crescimento: index > currentMonthIndex ? 0 : item.crescimento
+    }))
+  }, [data, currentMonthName])
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -40,10 +61,20 @@ export default function ChartCrescimento({ data }: ChartCrescimentoProps) {
       <CardContent>
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data}>
+            <BarChart data={processedData}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} interval={0} />
-              <YAxis axisLine={false} tickLine={false} unit="%" />
+              <XAxis 
+                dataKey="month" 
+                tickLine={false} 
+                tickMargin={10} 
+                axisLine={false} 
+                interval={0} 
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                unit="%" 
+              />
               <Tooltip
                 formatter={(value: any) => [`${value.toFixed(2)}%`, 'Crescimento']}
                 labelFormatter={(label) => `Mês: ${label}`}
