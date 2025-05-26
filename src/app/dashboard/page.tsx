@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [branchsData, setBranchsData] = useState<any[]>([])
   const [totalVendas, setTotalVendas] = useState(0)
   const [totalEmpresas, setTotalEmpresas] = useState(0)
-  const [vendaDia, setVendaDia] = useState(0) // Linha 31: Novo estado para venda do dia
+  const [vendaDia, setVendaDia] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadingChart, setLoadingChart] = useState(false)
   const [error, setError] = useState('')
@@ -61,7 +61,12 @@ export default function Dashboard() {
     new Date().toLocaleString('pt-BR', { month: 'long' }).toLowerCase()
   )
 
-  useEffect(() => {
+  const allMonths = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ]
+
+  useEffect(() => { 
     const carregarDados = async () => {
       try {
         const token = localStorage.getItem('token')
@@ -83,17 +88,10 @@ export default function Dashboard() {
 
         const somaInicial = salesWithBranchCnpj.reduce((acc, venda) => acc + Number(venda.value), 0)
 
-        // Cálculo da venda do dia
-        const hoje = new Date().toISOString().split('T')[0]
-        const vendaHoje =  filteredByBranch
-          .filter(sale => sale.date.split('T')[0] === hoje)
-          .reduce((acc, venda) => acc + Number(venda.value), 0)
-
         setSalesData(salesWithBranchCnpj)
         setBranchsData(branchs)
         setTotalVendas(somaInicial)
         setTotalEmpresas(branchs.length)
-        setVendaDia(vendaHoje) // Linha 83: Atualiza estado com venda do dia
         setAvailableYears(years)
       } catch (err: any) {
         console.error('Erro ao buscar dados:', err)
@@ -105,87 +103,25 @@ export default function Dashboard() {
 
     carregarDados()
   }, [])
-
-  useEffect(() => {
-  if (salesData.length > 0 && selectedYear !== 'all') {
-    calcularPrevisaoVendas()
-  }
-}, [salesData, selectedYear, selectedBranch, mesSelecionadoPrevisao])
-
-  const calcularPrevisaoVendas = () => {
-  const meses = [
-    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-  ]
-
-  const currentMonthIndex = meses.indexOf(mesSelecionadoPrevisao)
-
-  const crescimentoMensal = chartDataCrescimento.reduce(
-    (acc, item) => acc + item.crescimento,
-    0
-  ) / Math.max(chartDataCrescimento.length, 1)
-
-  const vendasMesAnterior = filteredByBranch
-    .filter(sale =>
-      new Date(sale.date).getMonth() === currentMonthIndex &&
-      new Date(sale.date).getFullYear().toString() === (parseInt(selectedYear) - 1).toString()
-    )
-    .reduce((acc, sale) => acc + sale.value, 0)
-
-  const valorPrevisao = vendasMesAnterior * (1 + crescimentoMensal / 100)
-
-  const previsaoUnica = {
-    mes: meses[currentMonthIndex].charAt(0).toUpperCase() + meses[currentMonthIndex].slice(1),
-    valor: valorPrevisao,
-    crescimentoEsperado: crescimentoMensal
-  }
-
-  setPrevisaoVendas([previsaoUnica])
-}
-
-  useEffect(() => {
-    const now = new Date()
-    const newConsultas: Consulta[] = []
-
-    if (selectedBranch !== 'all') {
-      const nome = branchsData.find(b => b.cnpj === selectedBranch)?.name || selectedBranch
-      newConsultas.push({
-        id: now.getTime() + '-branch',
-        tipo: 'filial',
-        valor: selectedBranch,
-        nome,
-        timestamp: now,
-        filtro: 'Filial'
-      })
-      setCurrentFilters(prev => ({ ...prev, branch: nome }))
-    } else {
-      setCurrentFilters(prev => ({ ...prev, branch: 'Todas as filiais' }))
-    }
-
-    if (selectedYear !== 'all') {
-      newConsultas.push({
-        id: now.getTime() + '-year',
-        tipo: 'ano',
-        valor: selectedYear,
-        nome: `Ano ${selectedYear}`,
-        timestamp: now,
-        filtro: 'Ano'
-      })
-      setCurrentFilters(prev => ({ ...prev, year: selectedYear }))
-    } else {
-      setCurrentFilters(prev => ({ ...prev, year: 'Todos os anos' }))
-    }
-
-    if (newConsultas.length > 0) {
-      setConsultas(prev => [...newConsultas, ...prev].slice(0, 50))
-    }
-  }, [selectedBranch, selectedYear, branchsData])
-
   const filteredByBranch = useMemo(() => {
     return selectedBranch === 'all'
       ? salesData
       : salesData.filter(sale => sale.branch_cnpj === selectedBranch)
   }, [salesData, selectedBranch])
+
+  useEffect(() => {
+    const hoje = new Date()
+    const ano = hoje.getFullYear()
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0')
+    const dia = String(hoje.getDate()).padStart(2, '0')
+    const dataHoje = `${ano}-${mes}-${dia}`
+
+    const vendaHoje = filteredByBranch
+      .filter(sale => sale.date === dataHoje)
+      .reduce((acc, venda) => acc + Number(venda.value), 0)
+
+    setVendaDia(vendaHoje)
+  }, [filteredByBranch])
 
   const filteredSales = useMemo(() => {
     return selectedYear === 'all'
@@ -206,18 +142,13 @@ export default function Dashboard() {
   const groupSalesByMonth = (sales: any[]) => {
     const months: Record<string, number> = {}
     sales.forEach((sale) => {
-      const date = new Date(sale.date)
-      const monthIndex = date.getUTCMonth()
+      const [year, month] = sale.date.split('-')
+      const monthIndex = parseInt(month) - 1
       const monthName = allMonths[monthIndex]
       months[monthName] = (months[monthName] || 0) + sale.value
     })
     return months
   }
-
-  const allMonths = [
-    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-  ]
 
   const chartDataVendas = useMemo(() => {
     const current = groupSalesByMonth(filteredSales)
@@ -265,7 +196,21 @@ export default function Dashboard() {
     setTotalVendas(soma)
     const timer = setTimeout(() => setLoadingChart(false), 150)
     return () => clearTimeout(timer)
-  }, [filteredSales, selectedBranch]);
+  }, [filteredSales, selectedBranch])
+  
+  useEffect(() => {
+  const hoje = new Date()
+  const ano = hoje.getFullYear()
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0')
+  const dia = String(hoje.getDate()).padStart(2, '0')
+  const dataHoje = `${ano}-${mes}-${dia}`
+
+  const vendaHoje = filteredByBranch
+    .filter(sale => sale.date === dataHoje)
+    .reduce((acc, venda) => acc + Number(venda.value), 0)
+
+  setVendaDia(vendaHoje)
+}, [filteredByBranch])
 
   if (loading) return <p className="p-4 text-gray-700">Carregando...</p>
   if (error) return <p className="p-4 text-red-600">{error}</p>
@@ -303,7 +248,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Linhas 134-149: Card modificado para Venda do Dia */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-center">
@@ -321,44 +265,43 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-       <Card>
-           <CardHeader>
-             <div className="flex items-center justify-center">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-center">
               <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Previsão de Vendas</CardTitle>
-      <TrendingUp className="ml-auto w-4 h-4" />
-    </div>
-    <CardDescription>
-      {mesSelecionadoPrevisao.charAt(0).toUpperCase() + mesSelecionadoPrevisao.slice(1)} • {currentFilters.branch}
-    </CardDescription>
-  </CardHeader>
-  <CardContent>
-    <select
-      value={mesSelecionadoPrevisao}
-      onChange={(e) => setMesSelecionadoPrevisao(e.target.value)}
-      className="mb-2 p-1 text-sm border rounded w-full"
-    >
-      {allMonths.map(month => (
-        <option key={month} value={month}>
-          {month.charAt(0).toUpperCase() + month.slice(1)}
-        </option>
-      ))}
-    </select>
+              <TrendingUp className="ml-auto w-4 h-4" />
+            </div>
+            <CardDescription>
+              {mesSelecionadoPrevisao.charAt(0).toUpperCase() + mesSelecionadoPrevisao.slice(1)} • {currentFilters.branch}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <select
+              value={mesSelecionadoPrevisao}
+              onChange={(e) => setMesSelecionadoPrevisao(e.target.value)}
+              className="mb-2 p-1 text-sm border rounded w-full"
+            >
+              {allMonths.map(month => (
+                <option key={month} value={month}>
+                  {month.charAt(0).toUpperCase() + month.slice(1)}
+                </option>
+              ))}
+            </select>
 
-    {previsaoVendas.length > 0 && (
-      <div className="flex justify-between text-sm mt-2">
-        <span>{previsaoVendas[0].mes}:</span>
-        <span className="font-medium">
-          R$ {previsaoVendas[0].valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          <span className={`ml-2 text-xs ${previsaoVendas[0].crescimentoEsperado >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            ({previsaoVendas[0].crescimentoEsperado.toFixed(2)}%)
-          </span>
-        </span>
-      </div>
-    )}
-  </CardContent>
-</Card>
+            {previsaoVendas.length > 0 && (
+              <div className="flex justify-between text-sm mt-2">
+                <span>{previsaoVendas[0].mes}:</span>
+                <span className="font-medium">
+                  R$ {previsaoVendas[0].valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <span className={`ml-2 text-xs ${previsaoVendas[0].crescimentoEsperado >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    ({previsaoVendas[0].crescimentoEsperado.toFixed(2)}%)
+                  </span>
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
-
 
       <section className="mt-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
