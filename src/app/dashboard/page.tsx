@@ -372,7 +372,7 @@ export default function Dashboard() {
           ) : selectedChart === 'vendas' ? (
             <ChartOverview data={chartDataVendas} />
           ) : selectedChart === 'metas' ? (
-            <ChartMetas data={chartDataMetas} />
+            <ChartMetas data={chartDataMetas} year={selectedYear} />
           ) : (
             <ChartCrescimento data={chartDataCrescimento} />
           )}
