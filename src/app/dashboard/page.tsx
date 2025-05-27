@@ -110,18 +110,20 @@ export default function Dashboard() {
   }, [salesData, selectedBranch])
 
   useEffect(() => {
-    const hoje = new Date()
-    const ano = hoje.getFullYear()
-    const mes = String(hoje.getMonth() + 1).padStart(2, '0')
-    const dia = String(hoje.getDate()).padStart(2, '0')
-    const dataHoje = `${ano}-${mes}-${dia}`
+  if (filteredByBranch.length === 0) {
+    setVendaDia(0)
+    return
+  }
 
-    const vendaHoje = filteredByBranch
-      .filter(sale => sale.date === dataHoje)
-      .reduce((acc, venda) => acc + Number(venda.value), 0)
+  const datas = filteredByBranch.map(sale => sale.date)
+  const ultimaData = datas.sort((a, b) => (a > b ? -1 : 1))[0]
 
-    setVendaDia(vendaHoje)
-  }, [filteredByBranch])
+  const vendaHoje = filteredByBranch
+    .filter(sale => sale.date === ultimaData)
+    .reduce((acc, venda) => acc + Number(venda.value), 0)
+
+  setVendaDia(vendaHoje)
+}, [filteredByBranch])
 
   const filteredSales = useMemo(() => {
     return selectedYear === 'all'
@@ -198,19 +200,6 @@ export default function Dashboard() {
     return () => clearTimeout(timer)
   }, [filteredSales, selectedBranch])
   
-  useEffect(() => {
-  const hoje = new Date()
-  const ano = hoje.getFullYear()
-  const mes = String(hoje.getMonth() + 1).padStart(2, '0')
-  const dia = String(hoje.getDate()).padStart(2, '0')
-  const dataHoje = `${ano}-${mes}-${dia}`
-
-  const vendaHoje = filteredByBranch
-    .filter(sale => sale.date === dataHoje)
-    .reduce((acc, venda) => acc + Number(venda.value), 0)
-
-  setVendaDia(vendaHoje)
-}, [filteredByBranch])
 
   if (loading) return <p className="p-4 text-gray-700">Carregando...</p>
   if (error) return <p className="p-4 text-red-600">{error}</p>
