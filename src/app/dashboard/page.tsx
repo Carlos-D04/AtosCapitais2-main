@@ -233,7 +233,7 @@ export default function Dashboard() {
               <DollarSign className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>
-              {currentFilters.year} • {currentFilters.branch}
+              {selectedYear === 'all' ? 'Todos os anos' : `Ano ${selectedYear}`} • {selectedBranch === 'all' ? 'Todas as filiais' : branchsData.find(b => b.cnpj === selectedBranch)?.name || selectedBranch}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -249,7 +249,9 @@ export default function Dashboard() {
               <CardTitle className="text-lg sm:text-xl text-gray-800 select-none">Total de Empresas</CardTitle>
               <User className="ml-auto w-4 h-4" />
             </div>
-            <CardDescription>Total cadastrado</CardDescription>
+            <CardDescription>
+              {selectedYear === 'all' ? 'Todos os anos' : `Ano ${selectedYear}`} • {selectedBranch === 'all' ? 'Todas as filiais' : branchsData.find(b => b.cnpj === selectedBranch)?.name || selectedBranch}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-base sm:text-lg font-bold">{totalEmpresas}</p>
@@ -263,7 +265,7 @@ export default function Dashboard() {
               <BadgeDollarSign className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>
-              {new Date().toLocaleDateString('pt-BR')} • {currentFilters.branch}
+              {new Date().toLocaleDateString('pt-BR')} • {selectedBranch === 'all' ? 'Todas as filiais' : branchsData.find(b => b.cnpj === selectedBranch)?.name || selectedBranch}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -280,10 +282,10 @@ export default function Dashboard() {
               <TrendingUp className="ml-auto w-4 h-4" />
             </div>
             <CardDescription>
-              {mesSelecionadoPrevisao.charAt(0).toUpperCase() + mesSelecionadoPrevisao.slice(1)} • {currentFilters.branch}
+              {mesSelecionadoPrevisao.charAt(0).toUpperCase() + mesSelecionadoPrevisao.slice(1)} • {selectedBranch === 'all' ? 'Todas as filiais' : branchsData.find(b => b.cnpj === selectedBranch)?.name || selectedBranch}
             </CardDescription>
           </CardHeader>
-         <CardContent>
+          <CardContent>          
   <select
     value={mesSelecionadoPrevisao}
     onChange={(e) => setMesSelecionadoPrevisao(e.target.value)}
