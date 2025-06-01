@@ -192,6 +192,25 @@ export default function Dashboard() {
     })
   }, [filteredSales, previousSales])
 
+    useEffect(() => {
+    const current = groupSalesByMonth(filteredSales)
+    const previous = groupSalesByMonth(previousSales)
+
+    const previsoes: PrevisaoVendas[] = allMonths.map(month => {
+      const atual = current[month] || 0
+      const anterior = previous[month] || 0
+      const crescimentoEsperado = anterior > 0 ? ((atual - anterior) / anterior) * 100 : 0
+      return {
+        mes: month,
+        valor: atual,
+        crescimentoEsperado: parseFloat(crescimentoEsperado.toFixed(2))
+      }
+    })
+
+    setPrevisaoVendas(previsoes)
+  }, [filteredSales, previousSales])
+
+
   useEffect(() => {
     setLoadingChart(true)
     const soma = filteredSales.reduce((acc: number, venda: any) => acc + Number(venda.value), 0)
@@ -264,31 +283,43 @@ export default function Dashboard() {
               {mesSelecionadoPrevisao.charAt(0).toUpperCase() + mesSelecionadoPrevisao.slice(1)} • {currentFilters.branch}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <select
-              value={mesSelecionadoPrevisao}
-              onChange={(e) => setMesSelecionadoPrevisao(e.target.value)}
-              className="mb-2 p-1 text-sm border rounded w-full"
-            >
-              {allMonths.map(month => (
-                <option key={month} value={month}>
-                  {month.charAt(0).toUpperCase() + month.slice(1)}
-                </option>
-              ))}
-            </select>
+         <CardContent>
+  <select
+    value={mesSelecionadoPrevisao}
+    onChange={(e) => setMesSelecionadoPrevisao(e.target.value)}
+    className="mb-2 p-1 text-sm border rounded w-full"
+  >
+    {allMonths.map((month) => (
+      <option key={month} value={month}>
+        {month.charAt(0).toUpperCase() + month.slice(1)}
+      </option>
+    ))}
+  </select>
 
-            {previsaoVendas.length > 0 && (
-              <div className="flex justify-between text-sm mt-2">
-                <span>{previsaoVendas[0].mes}:</span>
-                <span className="font-medium">
-                  R$ {previsaoVendas[0].valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  <span className={`ml-2 text-xs ${previsaoVendas[0].crescimentoEsperado >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    ({previsaoVendas[0].crescimentoEsperado.toFixed(2)}%)
-                  </span>
-                </span>
-              </div>
-            )}
-          </CardContent>
+  {(() => {
+    const previsaoMesSelecionado = previsaoVendas.find(
+      (item) => item.mes === mesSelecionadoPrevisao
+    );
+    return previsaoMesSelecionado ? (
+      <div className="flex justify-between text-sm mt-2">
+        <span>{previsaoMesSelecionado.mes}:</span>
+        <span className="font-medium">
+          R$ {previsaoMesSelecionado.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <span
+            className={`ml-2 text-xs ${
+              previsaoMesSelecionado.crescimentoEsperado >= 0
+                ? 'text-green-500'
+                : 'text-red-500'
+            }`}
+          >
+            ({previsaoMesSelecionado.crescimentoEsperado.toFixed(2)}%)
+          </span>
+        </span>
+      </div>
+    ) : null;
+  })()}
+</CardContent>
+
         </Card>
       </section>
 
